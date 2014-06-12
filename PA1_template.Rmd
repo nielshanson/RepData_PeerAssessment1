@@ -7,13 +7,15 @@ Here we will analize data from an unspecified *personal activity monitoring devi
 ```{r}
 setwd("~/Desktop/data_science/05_reproduce/assign/RepData_PeerAssessment1/")
 # extract and load activity.csv file from activity.zip
-act_data <- read.csv(unz("activity.zip", "activity.csv")) 
+act_data <- read.csv(unz("activity.zip", "activity.csv"))
+act_data.no_na <- act_data[!is.na(act_data$steps),] # remove NAs
+percent_na <- round(sum(is.na(act_data$steps)) /length(act_data$steps) * 100, 2) # note percent missing
 ```
 
 ## What is mean total number of steps taken per day?
 
-```{r results='asis'}
-act_data.no_na <- act_data[!is.na(act_data$steps),] # remove NAs
+```{r}
+
 steps_per_day = tapply(act_data.no_na$steps, act_data.no_na$date, sum)
 steps_per_day[is.na(steps_per_day)] = 0
 
@@ -25,53 +27,85 @@ The mean total number of steps per day, rounded to the nearest step, is `r mean_
 
 ## What is the average daily activity pattern?
 
-```{r}
-library(scales)
-mean_steps_per_interval = tapply(act_data.no_na$steps, act_data.no_na$interval, mean)
-plot(act_data.no_na$interval, act_data.no_na$steps, col = alpha("light blue", 0.25), pch=16)
-lines(names(mean_steps_per_interval), mean_steps_per_interval, lwd=3, col="black")
+To do this we will again use the `tapply` function, but this time we will condition on  the `interval` factor. This will calculate the mean number of steps in each five minuite interval for each day. In the plot below, the dailty average is plotted as the solid black line while the individual data points are plotted as low transparency points so as to give us an idea of their density per interval.
 
+```{r}
+library(scales) # for alpha() function
+mean_steps_per_interval = tapply(act_data.no_na$steps, act_data.no_na$interval, mean)
+plot(act_data.no_na$interval, act_data.no_na$steps, 
+     col = alpha("light green", 0.25), pch=16,
+     xlab="Interval", ylab="Number of Steps", 
+     main="Average number of steps per 5-min interval (imputed)")
+lines(names(mean_steps_per_interval), mean_steps_per_interval, lwd=3, col="black")
+legend(83.67, 744.41, c("Avg. Steps"), lwd=c(3),col=c("black"))
 ```
 
 ## Imputing missing values
 
-Lets assume that missing values from each interval are missing **at random**, since our sample has a large number of points, lets impute the missing values by taking a random sample from other intervals in other days. 
+Lets assume that missing values from each interval are missing **at random**, that is there is no underlying process that is biasing the process. We also note that only approximately `r percent_na`% of our original sample is missing, meaning we likely still have a representative sample. Thus, it is reasonable to impute missing values in an inverval by taking a random sample from those observed in the same interval on other days. 
 
 ```{r}
-set.seed(12345)
-missing_set <- act_data[is.na(act_data$steps),]
-non_missing_set <- act_data[!is.na(act_data$steps),]
+set.seed(12345) # set random seed for replocation
+missing_set <- act_data[is.na(act_data$steps),] # NAs samples to impute
+non_missing_set <- act_data[!is.na(act_data$steps),] # observed samples
 
+# interate through the missing_set, noting the interval for each iteraction, 
+# and taking a random sample from the non_missing_set and imputing that value
+# into the original data frame act_data
 for (i in row.names(missing_set) ) {
-    missing_interval = act_data[i,"interval"]
+    # note interval
+    missing_interval = act_data[i,"interval"] 
+    # create a sample set for the missing interval
     sample_set <- non_missing_set[non_missing_set$interval==missing_interval,"steps"]
+    # take sample
     samp <- sample(sample_set, size=1, replace=TRUE)
+    # impute value in data frame
     act_data[i, "steps"] = samp
 }
+```
 
-# plot the activity levels again to see if there are any differences
-mean_steps_per_interval = tapply(act_data$steps, act_data$interval, mean)
-plot(act_data$interval, act_data$steps, col = alpha("light blue", 0.25), pch=16)
-lines(names(mean_steps_per_interval), mean_steps_per_interval, lwd=3, col="black")
-
+At this point in might be prudent to replot our data again to check to see if the reuslts changed between our naive method, where we replaced all NA's with zero, and our new *random sample* imputation method we just performed.
 
 ```
+# plot the activity levels again to see if there are any differences
+# after imputation
+mean_steps_per_interval_imp <- tapply(act_data$steps, act_data$interval, mean)
+plot(act_data$interval, act_data$steps, col = alpha("light green", 0.25),
+     pch=16,xlab="Interval", ylab="Number of Steps", 
+     main="Average number of steps per 5-min interval (imputed)")
+lines(names(mean_steps_per_interval_imp), mean_steps_per_interval_imp, lwd=3, col="black")
+lines(names(mean_steps_per_interval), mean_steps_per_interval, lwd=3, col="red")
+legend(83.67, 744.41, c("Avg. Steps","Avg. Steps (imputed)"), lwd=c(3,3),col=c("red","black"))
+```
+
+Doesn't look to be that substantial a change.
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
+We'll separate the two day classes and calcualte the per step averages separately. Then we will plot them together with different colors.
+
 ```{r}
-act_data$dayOfWeek = weekdays(as.Date(act_data$date))
-act_data$weekend = (act_data$dayOfWeek %in% c("Saturday", "Sunday"))
-act_data_weekend = act_data[act_data$weekend == TRUE,]
-act_data_weekday = act_data[act_data$weekend == FALSE,]
+act_data$dayOfWeek = weekdays(as.Date(act_data$date)) # create dayOfWeek factor
+act_data$weekend = (act_data$dayOfWeek %in% c("Saturday", "Sunday")) # create weekend factor
+act_data_weekend = act_data[act_data$weekend == TRUE,] # weekend set
+act_data_weekday = act_data[act_data$weekend == FALSE,] # weekday set
 
-quartz()
-mean_steps_per_interval = tapply(act_data_weekend$steps, act_data_weekend$interval, mean)
-plot(act_data_weekend$interval, act_data_weekend$steps, col = alpha("salmon", 0.25), pch=16)
+# calculate weekday and weekend means
+mean_steps_per_interval_weekend = tapply(act_data_weekend$steps, act_data_weekend$interval, mean)
+mean_steps_per_interval_weekday = tapply(act_data_weekday$steps, act_data_weekday$interval, mean)
+
+# plot both the points
+plot(act_data_weekend$interval, act_data_weekend$steps, col = alpha("salmon", 0.25), pch=16,
+     main="Comparison of average weekend and weekday activity patterns",
+     xlab="5-min Interval", ylab="Number of Steps")
 points(act_data_weekday$interval, act_data_weekday$steps, col = alpha("light blue", 0.25), pch=16)
-lines(names(mean_steps_per_interval), mean_steps_per_interval, lwd=3, col="red")
-mean_steps_per_interval = tapply(act_data_weekday$steps, act_data_weekday$interval, mean)
-lines(names(mean_steps_per_interval), mean_steps_per_interval, lwd=3, col="blue")
 
+# plot the averages
+lines(names(mean_steps_per_interval_weekend), mean_steps_per_interval_weekend, lwd=3, col="red")
+lines(names(mean_steps_per_interval_weekday), mean_steps_per_interval_weekday, lwd=3, col="blue")
 
+# add a legend for lines
+legend(83.67, 744.41, c("Weekend","Weekday"), lwd=c(3,3),col=c("red","blue"))
 ```
+
+The two patterns are somewhat simmilar, but there are also some subltle differences. We can notice that on weekdays (blue), the average activity increases earlier than on weekends, consistent with a general trend of getting up earlier on weekdays. We can also notice that on weekend (red) the mid day average activity (between intervals 1200 and 1800) is higher, possibly due to extra curricular activies that cause people to move around more often. We also can notice that people are more active later into the night on weekends.
