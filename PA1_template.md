@@ -1,17 +1,21 @@
 # Reproducible Research: Peer Assessment 1
 
-Here we will analize data from an unspecified *personal activity monitoring device*. The device collects data a 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
+Here we will analize data from an unspecified *personal activity monitoring device*. The device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
 
 ## Loading and preprocessing the data
+
+Here we will load the csv data file from the provided zip file, `activity.zip`. As a first pass of preprocessig we will *naively* exclude missing values, we will refer to this as the *naive* or *remove NAs* method. We will revist this issue later in the imputation question. 
 
 
 ```r
 setwd("~/Desktop/data_science/05_reproduce/assign/RepData_PeerAssessment1/")
 # extract and load activity.csv file from activity.zip
 act_data <- read.csv(unz("activity.zip", "activity.csv"))
+# note percentage of missing values
+percent_na <- sum(is.na(act_data$steps))/length(act_data$steps) * 100  # percent missing
+percent_na <- round(percent_na, 2)  # round to two desimal points
+# Naively remove NAs for now
 act_data.no_na <- act_data[!is.na(act_data$steps), ]  # remove NAs
-percent_na <- round(sum(is.na(act_data$steps))/length(act_data$steps) * 100, 
-    2)  # note percent missing
 ```
 
 
@@ -19,11 +23,11 @@ percent_na <- round(sum(is.na(act_data$steps))/length(act_data$steps) * 100,
 
 
 ```r
-
+# calculate the total number of steps for each day
 steps_per_day = tapply(act_data.no_na$steps, act_data.no_na$date, sum)
-steps_per_day[is.na(steps_per_day)] = 0
+steps_per_day[is.na(steps_per_day)] = 0  # set missing values to zero
 
-# create a data frame
+# calculate the mean number of steps
 mean_total_steps <- round(mean(steps_per_day))
 ```
 
@@ -36,12 +40,17 @@ To do this we will again use the `tapply` function, but this time we will condit
 
 
 ```r
-library(scales)  # for alpha() function
+library(scales)  # for alpha() transparancy
+
+# calculate mean number of steps per interval
 mean_steps_per_interval = tapply(act_data.no_na$steps, act_data.no_na$interval, 
     mean)
+
+# create the plot with mean number of steps and points
 plot(act_data.no_na$interval, act_data.no_na$steps, col = alpha("light green", 
-    0.25), pch = 16)
+    0.25), pch = 16, xlab = "Interval", ylab = "Number of Steps", main = "Average number of steps per 5-min interval (imputed)")
 lines(names(mean_steps_per_interval), mean_steps_per_interval, lwd = 3, col = "black")
+legend(83.67, 744.41, c("Avg. Steps"), lwd = c(3), col = c("black"))
 ```
 
 ![plot of chunk unnamed-chunk-3](figure/unnamed-chunk-3.png) 
@@ -49,7 +58,7 @@ lines(names(mean_steps_per_interval), mean_steps_per_interval, lwd = 3, col = "b
 
 ## Imputing missing values
 
-Lets assume that missing values from each interval are missing **at random**, that is there is no underlying process that is biasing the process. We also note that only approximately 13.11% of our original sample is missing, meaning we likely still have a representative sample. Thus, it is reasonable to impute missing values in an inverval by taking a random sample from those observed in the same interval on other days. 
+Lets assume that missing values from each interval are missing **at random**, that is there is no underlying process that is biasing the missing data. We also note that only approximately 13.11% of our original sample is missing, meaning we likely still have a representative sample. Thus, it is reasonable to impute missing values in an inverval by taking a random sample from those observed in the same interval on other days. 
 
 
 ```r
@@ -74,44 +83,71 @@ for (i in row.names(missing_set)) {
 ```
 
 
-At this point in might be prudent to replot our data again to check to see if the reuslts changed between our naive method, where we replaced all NA's with zero, and our new *random sample* imputation method we just performed.
-
-```
-# plot the activity levels again to see if there are any differences
-mean_steps_per_interval <- tapply(act_data$steps, act_data$interval, mean)
-plot(act_data$interval, act_data$steps, col = alpha("light green", 0.25),
-     pch=16,xlab="Interval", ylab="Number of Steps", 
-     main="Averaage number of steps per 5-min interval (imputed)")
-lines(names(mean_steps_per_interval), mean_steps_per_interval, lwd=3, col="black")
-```
-
-Doesn't look to be that substantial a change.  We can guess that where the activity levels are low that this corresponds to when people are sleeping, so each 5-min interval is relative to 12am. Before we go to the next question it might be interesting to replace the interval with a timestamp.
-
-## Are there differences in activity patterns between weekdays and weekends?
+At this point in might be prudent to replot our mean activity levels again to check to see if the reuslts have changed between our naive method, where we removed all NAs from the sample, and our new *random sample* imputation method we just performed.
 
 
 ```r
-act_data$dayOfWeek = weekdays(as.Date(act_data$date))
-act_data$weekend = (act_data$dayOfWeek %in% c("Saturday", "Sunday"))
-act_data_weekend = act_data[act_data$weekend == TRUE, ]
-act_data_weekday = act_data[act_data$weekend == FALSE, ]
-
-quartz()
-mean_steps_per_interval = tapply(act_data_weekend$steps, act_data_weekend$interval, 
-    mean)
-plot(act_data_weekend$interval, act_data_weekend$steps, col = alpha("salmon", 
-    0.25), pch = 16)
-points(act_data_weekday$interval, act_data_weekday$steps, col = alpha("light blue", 
-    0.25), pch = 16)
+# plot the activity levels again to see if there are any differences after
+# random imputation
+mean_steps_per_interval_imp <- tapply(act_data$steps, act_data$interval, mean)
+plot(act_data$interval, act_data$steps, col = alpha("light green", 0.25), pch = 16, 
+    xlab = "5-min Intervals", ylab = "Number of Steps", main = "Average number of steps per 5-min interval (imputed)")
+lines(names(mean_steps_per_interval_imp), mean_steps_per_interval_imp, lwd = 3, 
+    col = "black")
 lines(names(mean_steps_per_interval), mean_steps_per_interval, lwd = 3, col = "red")
-mean_steps_per_interval = tapply(act_data_weekday$steps, act_data_weekday$interval, 
-    mean)
-lines(names(mean_steps_per_interval), mean_steps_per_interval, lwd = 3, col = "blue")
+legend(83.67, 744.41, c("Avg. Steps (NAs removed)", "Avg. Steps (NAs imputed)"), 
+    lwd = c(3, 3), col = c("red", "black"))
 ```
 
 ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-5.png) 
 
-```r
 
+Comparing the two averages above accross the intervals, we observe that there is not much difference in the means when comparing the NAs removed and NAs imputed methods. We observe that there may be some slight underestimation in some intervals in the NAs removed sample.
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+Next, we'll separate the data into weekends and weekdays and calcualte the per step averages separately. Then we will plot them together with different colors.
+
+
+```r
+act_data$dayOfWeek = weekdays(as.Date(act_data$date))  # create dayOfWeek factor
+act_data$weekend = (act_data$dayOfWeek %in% c("Saturday", "Sunday"))  # create weekend factor
+act_data_weekend = act_data[act_data$weekend == TRUE, ]  # weekend set
+act_data_weekday = act_data[act_data$weekend == FALSE, ]  # weekday set
+
+# calculate weekday and weekend means
+mean_steps_per_interval_weekend = tapply(act_data_weekend$steps, act_data_weekend$interval, 
+    mean)
+mean_steps_per_interval_weekday = tapply(act_data_weekday$steps, act_data_weekday$interval, 
+    mean)
+
+# plot both the points
+plot(act_data_weekend$interval, act_data_weekend$steps, col = alpha("salmon", 
+    0.25), pch = 16, main = "Comparison of average weekend and weekday activity patterns", 
+    xlab = "5-min Intervals", ylab = "Number of Steps")
+points(act_data_weekday$interval, act_data_weekday$steps, col = alpha("light blue", 
+    0.25), pch = 16)
+
+# plot the averages
+lines(names(mean_steps_per_interval_weekend), mean_steps_per_interval_weekend, 
+    lwd = 3, col = "red")
+lines(names(mean_steps_per_interval_weekday), mean_steps_per_interval_weekday, 
+    lwd = 3, col = "blue")
+
+# add a legend for lines
+legend(83.67, 744.41, c("Weekend", "Weekday"), lwd = c(3, 3), col = c("red", 
+    "blue"))
 ```
 
+![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-6.png) 
+
+
+The two patterns are somewhat simmilar, but there are also some subltle differences. We can notice that on weekdays (blue), the average activity increases earlier than on weekends, consistent with a general trend of getting up earlier on weekdays. We can also notice that on weekend (red) the mid day average activity (between intervals 1200 and 1800) is higher, possibly due to extra curricular activies that cause people to move around more often. We also can notice that people are more active later into the night on weekends.
+
+
+```r
+cur_date <- date()
+```
+
+
+This document was last compiled Sat Jun 14 10:15:25 2014.
