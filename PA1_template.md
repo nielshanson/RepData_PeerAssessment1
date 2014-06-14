@@ -21,18 +21,29 @@ act_data.no_na <- act_data[!is.na(act_data$steps), ]  # remove NAs
 
 ## What is mean total number of steps taken per day?
 
+It would be best to calculate the histogram of total steps as well as the mean and median.
+
 
 ```r
 # calculate the total number of steps for each day
 steps_per_day = tapply(act_data.no_na$steps, act_data.no_na$date, sum)
 steps_per_day[is.na(steps_per_day)] = 0  # set missing values to zero
 
-# calculate the mean number of steps
+# calculate the mean and median
 mean_total_steps <- round(mean(steps_per_day))
+median_total_steps <- round(median(steps_per_day))
+
+# plot histogram with mean (blue), median (red)
+hist(steps_per_day, breaks = 10, main = "Total Steps per Day", xlab = "Steps per day")
+abline(v = mean_total_steps, lwd = 3, col = "blue")
+abline(v = median_total_steps, lwd = 3, col = "red")
+legend(13000, 15.3, c("Mean", "Median"), lwd = c(3, 3), col = c("blue", "red"))
 ```
 
+![plot of chunk unnamed-chunk-2](figure/unnamed-chunk-2.png) 
 
-The mean total number of steps per day, rounded to the nearest step, is 9354.
+
+The mean (blue) and median (red) of total number of steps per day, rounded to the nearest step, is 9354 and 1.0395 &times; 10<sup>4</sup>, respectively.
 
 ## What is the average daily activity pattern?
 
@@ -55,6 +66,16 @@ legend(83.67, 744.41, c("Avg. Steps"), lwd = c(3), col = c("black"))
 
 ![plot of chunk unnamed-chunk-3](figure/unnamed-chunk-3.png) 
 
+```r
+
+# what is the interval with the maximum average number of steps?
+max_avg_steps <- round(max(mean_steps_per_interval), 2)
+max_avg_steps_interval <- names(mean_steps_per_interval[mean_steps_per_interval == 
+    max(mean_steps_per_interval)])
+```
+
+
+The 835 contained the maximum number of steps with  206.17 steps on avearge.
 
 ## Imputing missing values
 
@@ -83,6 +104,29 @@ for (i in row.names(missing_set)) {
 ```
 
 
+After imputing, we should re-plot the total steps per day to observe any distributional changes.
+
+
+```r
+# calculate the total number of steps for each day
+steps_per_day_imp = tapply(act_data$steps, act_data$date, sum)
+
+# calculate the mean and median
+mean_total_steps_imp <- round(mean(steps_per_day_imp))
+median_total_steps_imp <- round(median(steps_per_day_imp))
+
+# plot histogram with mean (blue), median (red)
+hist(steps_per_day, breaks = 10, main = "Total Steps per Day (Imputed)", xlab = "Steps per day")
+abline(v = mean_total_steps_imp, lwd = 3, col = "blue")
+abline(v = median_total_steps_imp, lwd = 3, col = "red")
+legend(13000, 15.3, c("Mean", "Median"), lwd = c(3, 3), col = c("blue", "red"))
+```
+
+![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-5.png) 
+
+
+The mean (blue) and median (red) of total number of steps per day, rounded to the nearest step, is 1.0744 &times; 10<sup>4</sup> and 1.0828 &times; 10<sup>4</sup>, respectively. We notice they are now much closer together than before.
+
 At this point in might be prudent to replot our mean activity levels again to check to see if the reuslts have changed between our naive method, where we removed all NAs from the sample, and our new *random sample* imputation method we just performed.
 
 
@@ -99,7 +143,7 @@ legend(83.67, 744.41, c("Avg. Steps (NAs removed)", "Avg. Steps (NAs imputed)"),
     lwd = c(3, 3), col = c("red", "black"))
 ```
 
-![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-5.png) 
+![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-6.png) 
 
 
 Comparing the two averages above accross the intervals, we observe that there is not much difference in the means when comparing the NAs removed and NAs imputed methods. We observe that there may be some slight underestimation in some intervals in the NAs removed sample.
@@ -139,7 +183,7 @@ legend(83.67, 744.41, c("Weekend", "Weekday"), lwd = c(3, 3), col = c("red",
     "blue"))
 ```
 
-![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-6.png) 
+![plot of chunk unnamed-chunk-7](figure/unnamed-chunk-7.png) 
 
 
 The two patterns are somewhat simmilar, but there are also some subltle differences. We can notice that on weekdays (blue), the average activity increases earlier than on weekends, consistent with a general trend of getting up earlier on weekdays. We can also notice that on weekend (red) the mid day average activity (between intervals 1200 and 1800) is higher, possibly due to extra curricular activies that cause people to move around more often. We also can notice that people are more active later into the night on weekends.
@@ -150,4 +194,4 @@ cur_date <- date()
 ```
 
 
-This document was last compiled Sat Jun 14 10:15:25 2014.
+This document was last compiled Sat Jun 14 10:54:25 2014.

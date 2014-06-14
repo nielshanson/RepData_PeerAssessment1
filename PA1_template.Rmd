@@ -19,16 +19,27 @@ act_data.no_na <- act_data[!is.na(act_data$steps),] # remove NAs
 
 ## What is mean total number of steps taken per day?
 
+It would be best to calculate the histogram of total steps as well as the mean and median.
+
 ```{r}
 # calculate the total number of steps for each day
 steps_per_day = tapply(act_data.no_na$steps, act_data.no_na$date, sum)
 steps_per_day[is.na(steps_per_day)] = 0 # set missing values to zero
 
-# calculate the mean number of steps
-mean_total_steps<- round(mean(steps_per_day))
+# calculate the mean and median
+mean_total_steps <- round(mean(steps_per_day))
+median_total_steps <- round(median(steps_per_day))
+
+# plot histogram with mean (blue), median (red)
+hist(steps_per_day, breaks=10,
+     main="Total Steps per Day",
+     xlab="Steps per day")
+abline(v=mean_total_steps, lwd=3, col="blue")
+abline(v=median_total_steps, lwd=3, col="red")
+legend(13000, 15.30, c("Mean", "Median"), lwd=c(3,3),col=c("blue","red"))
 ```
 
-The mean total number of steps per day, rounded to the nearest step, is `r mean_total_steps`.
+The mean (blue) and median (red) of total number of steps per day, rounded to the nearest step, is `r mean_total_steps` and `r median_total_steps`, respectively.
 
 ## What is the average daily activity pattern?
 
@@ -47,7 +58,13 @@ plot(act_data.no_na$interval, act_data.no_na$steps,
      main="Average number of steps per 5-min interval (imputed)")
 lines(names(mean_steps_per_interval), mean_steps_per_interval, lwd=3, col="black")
 legend(83.67, 744.41, c("Avg. Steps"), lwd=c(3),col=c("black"))
+
+# what is the interval with the maximum average number of steps?
+max_avg_steps <- round(max(mean_steps_per_interval),2)
+max_avg_steps_interval <- names(mean_steps_per_interval[mean_steps_per_interval == max(mean_steps_per_interval)])
 ```
+
+The `r max_avg_steps_interval` contained the maximum number of steps with  `r max_avg_steps` steps on avearge.
 
 ## Imputing missing values
 
@@ -72,6 +89,27 @@ for (i in row.names(missing_set) ) {
     act_data[i, "steps"] = samp
 }
 ```
+
+After imputing, we should re-plot the total steps per day to observe any distributional changes.
+
+```{r}
+# calculate the total number of steps for each day
+steps_per_day_imp = tapply(act_data$steps, act_data$date, sum)
+
+# calculate the mean and median
+mean_total_steps_imp <- round(mean(steps_per_day_imp))
+median_total_steps_imp <- round(median(steps_per_day_imp))
+
+# plot histogram with mean (blue), median (red)
+hist(steps_per_day, breaks=10,
+     main="Total Steps per Day (Imputed)",
+     xlab="Steps per day")
+abline(v=mean_total_steps_imp, lwd=3, col="blue")
+abline(v=median_total_steps_imp, lwd=3, col="red")
+legend(13000, 15.30, c("Mean", "Median"), lwd=c(3,3),col=c("blue","red"))
+```
+
+The mean (blue) and median (red) of total number of steps per day, rounded to the nearest step, is `r mean_total_steps_imp` and `r median_total_steps_imp`, respectively. We notice they are now much closer together than before.
 
 At this point in might be prudent to replot our mean activity levels again to check to see if the reuslts have changed between our naive method, where we removed all NAs from the sample, and our new *random sample* imputation method we just performed.
 
